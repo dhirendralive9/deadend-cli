@@ -12,6 +12,7 @@ COMPATIBILITY LAYER: AgentRunner now wraps the new CoreAgent implementation
 while maintaining the same interface as Pydantic AI for backward compatibility.
 """
 from __future__ import annotations
+import os
 from typing import Any
 from pydantic import BaseModel
 from pydantic_ai import DeferredToolResults
@@ -207,6 +208,12 @@ class AgentRunner:
                 # Pydantic AI Tool object
                 tool_functions.append(tool.function)
 
+        # Build extra headers (e.g., Bedrock API Key bearer token auth)
+        extra_headers = None
+        bedrock_api_key = os.environ.get("BEDROCK_API_KEY")
+        if bedrock_api_key:
+            extra_headers = {"Authorization": f"Bearer {bedrock_api_key}"}
+
         # Create CoreAgent instance
         self.agent = CoreAgent(
             model=model_name,
@@ -216,6 +223,7 @@ class AgentRunner:
             api_key=api_key,
             api_base=api_base,
             name=name,
+            extra_headers=extra_headers,
         )
 
         self.response = None

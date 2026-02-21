@@ -132,6 +132,7 @@ class CoreAgent:
         api_base: str | None = None,
         rate_limit_rpm: int = 60,
         name: str = "agent",
+        extra_headers: dict | None = None,
     ):
         """Initialize CoreAgent.
 
@@ -144,6 +145,7 @@ class CoreAgent:
             api_base: Base URL for API (default: None, uses provider default)
             rate_limit_rpm: Rate limit in requests per minute (default: 60)
             name: Name of the agent for logging (default: "agent")
+            extra_headers: Extra HTTP headers for LiteLLM (e.g., Bedrock API Key auth)
         """
         if not LITELLM_AVAILABLE:
             raise ImportError("litellm is required. Install with: pip install litellm")
@@ -155,6 +157,7 @@ class CoreAgent:
         self.output_schema = output_schema
         self.api_key = api_key
         self.api_base = api_base
+        self.extra_headers = extra_headers
 
         # Rate limiting - simple AsyncLimiter
         if AIOLIMITER_AVAILABLE:
@@ -656,6 +659,10 @@ class CoreAgent:
                 # Use a placeholder - some local models don't require authentication
                 kwargs["api_key"] = "sk-dummy-key-for-local-model"
 
+            # Extra headers (e.g., Bedrock API Key bearer token auth)
+            if self.extra_headers:
+                kwargs["extra_headers"] = self.extra_headers
+
             return await acompletion(**kwargs)
 
         try:
@@ -1003,6 +1010,9 @@ class CoreAgent:
                 elif self.api_base and self.model.startswith("openai/"):
                     kwargs["api_key"] = "sk-dummy-key-for-local-model"
 
+                if self.extra_headers:
+                    kwargs["extra_headers"] = self.extra_headers
+
                 response = await self.instructor_client.chat.completions.create(**kwargs)
                 try:
                     console.print(f"[bold green][Structured Output OK][/bold green] {type(response).__name__}")
@@ -1118,6 +1128,9 @@ Output ONLY valid JSON, no other text. The JSON must match the schema exactly.""
             kwargs["api_key"] = self.api_key
         elif self.api_base and self.model.startswith("openai/"):
             kwargs["api_key"] = "sk-dummy-key-for-local-model"
+
+        if self.extra_headers:
+            kwargs["extra_headers"] = self.extra_headers
 
         try:
             response = await acompletion(**kwargs)
